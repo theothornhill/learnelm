@@ -1,6 +1,5 @@
-module Page.First exposing (..)
+module Page.Weather exposing (..)
 
-import Debug
 import Html exposing (..)
 import Html.Events exposing (onClick)
 import Http
@@ -19,12 +18,12 @@ type Msg
 
 
 init =
-    Success "s"
+    Success "Get weather by pressing the button"
 
 
 view : Model -> { title : String, body : Html Msg }
 view model =
-    { title = "First"
+    { title = "Weather"
     , body =
         div []
             [ viewWeather model ]

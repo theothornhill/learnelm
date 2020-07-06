@@ -3,13 +3,13 @@ module Main exposing (..)
 import Browser
 import Browser.Navigation as Nav
 import Html exposing (..)
+import Html.Attributes exposing (href)
 import Page
-import Page.First as First
 import Page.Home as Home
 import Page.Second as Second
+import Page.Weather as Weather
 import Url
 import Url.Parser as Parser
-import Html.Attributes exposing (href)
 
 
 
@@ -37,22 +37,8 @@ type alias Model =
 
 type SubModel
     = Home Home.Model
-    | First First.Model
+    | Weather Weather.Model
     | Second Second.Model
-
-
-type Msg
-    = LinkClicked Browser.UrlRequest
-    | UrlChanged Url.Url
-    | GotHomeMsg Home.Msg
-    | GotFirstMsg First.Msg
-    | GotSecondMsg Second.Msg
-
-
-type alias Details msg =
-    { title : String
-    , body : List (Html msg)
-    }
 
 
 init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
@@ -65,6 +51,10 @@ init _ url key =
     )
 
 
+
+-- VIEW
+
+
 viewLink : String -> String -> Html msg
 viewLink path t =
     li
@@ -72,6 +62,7 @@ viewLink path t =
         [ a [ href path ] [ text t ] ]
 
 
+viewHeader : Model -> Html Msg
 viewHeader model =
     let
         url =
@@ -80,8 +71,8 @@ viewHeader model =
         homeUrl =
             { url | path = "/home" }
 
-        firstUrl =
-            { url | path = "/first" }
+        weatherUrl =
+            { url | path = "/weather" }
 
         secondUrl =
             { url | path = "/second" }
@@ -90,32 +81,48 @@ viewHeader model =
         [ ul
             []
             [ viewLink (Url.toString homeUrl) "Home"
-            , viewLink (Url.toString firstUrl) "First"
+            , viewLink (Url.toString weatherUrl) "Weather"
             , viewLink (Url.toString secondUrl) "Second"
             ]
         ]
 
 
+view : Model -> Browser.Document Msg
 view model =
     let
-        viewPage page toMsg details =
+        viewPage toMsg details =
             let
                 { title, body } =
-                    Page.view page details
+                    Page.view details
+
+                page =
+                    List.map (Html.map toMsg) body
             in
             { title = title
-            , body = viewHeader model :: (List.map (Html.map toMsg) body)
+            , body = viewHeader model :: page
             }
     in
     case model.page of
         Home home ->
-            viewPage Page.Home GotHomeMsg (Home.view home)
+            viewPage GotHomeMsg (Home.view home)
 
-        First first ->
-            viewPage Page.First GotFirstMsg (First.view first)
+        Weather weather ->
+            viewPage GotWeatherMsg (Weather.view weather)
 
         Second second ->
-            viewPage Page.Second GotSecondMsg (Second.view second)
+            viewPage GotSecondMsg (Second.view second)
+
+
+
+-- UPDATE
+
+
+type Msg
+    = LinkClicked Browser.UrlRequest
+    | UrlChanged Url.Url
+    | GotHomeMsg Home.Msg
+    | GotWeatherMsg Weather.Msg
+    | GotSecondMsg Second.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -142,9 +149,9 @@ update message model =
             Home.update subMsg home
                 |> updateWith Home GotHomeMsg model
 
-        ( GotFirstMsg subMsg, First first ) ->
-            First.update subMsg first
-                |> updateWith First GotFirstMsg model
+        ( GotWeatherMsg subMsg, Weather weather ) ->
+            Weather.update subMsg weather
+                |> updateWith Weather GotWeatherMsg model
 
         ( GotSecondMsg subMsg, Second second ) ->
             Second.update subMsg second
@@ -161,20 +168,28 @@ updateWith toModel toMsg model ( subModel, subCmd ) =
     )
 
 
+
+-- SUBSCRIPTIONS
+
+
 subscriptions : Model -> Sub Msg
 subscriptions _ =
     Sub.none
+
+
+
+-- URL PARSING
 
 
 parser : Parser.Parser (SubModel -> a) a
 parser =
     Parser.oneOf
         [ Parser.map (Home Home.init) (Parser.s "home")
-        , Parser.map (First First.init) (Parser.s "first")
+        , Parser.map (Weather Weather.init) (Parser.s "weather")
         , Parser.map (Second Second.init) (Parser.s "second")
         ]
 
 
 fromUrl : Url.Url -> SubModel
 fromUrl url =
-    Maybe.withDefault (First First.init) (Parser.parse parser url)
+    Maybe.withDefault (Home Home.init) (Parser.parse parser url)
