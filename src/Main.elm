@@ -150,7 +150,7 @@ update message model =
                 |> updateWith Home GotHomeMsg model
 
         ( GotWeatherMsg subMsg, Weather weather ) ->
-            Weather.update subMsg weather
+            Weather.update subMsg weather Weather.defaultPosition
                 |> updateWith Weather GotWeatherMsg model
 
         ( GotSecondMsg subMsg, Second second ) ->

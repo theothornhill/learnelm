@@ -17,6 +17,18 @@ type Msg
     | GetWeather
 
 
+type alias Position =
+    { latitude : Float
+    , longitude : Float
+    }
+
+defaultPosition : Position
+defaultPosition =
+    { latitude = 51.5
+    , longitude = 0.0
+    }
+
+init : Model
 init =
     Success "Get weather by pressing the button"
 
@@ -53,8 +65,8 @@ viewWeather model =
             weatherView s
 
 
-update : Msg -> Model -> ( Model, Cmd Msg )
-update msg model =
+update : Msg -> Model -> Position -> ( Model, Cmd Msg )
+update msg _ position =
     case msg of
         GotWeather result ->
             case result of
@@ -65,13 +77,20 @@ update msg model =
                     ( Failure, Cmd.none )
 
         GetWeather ->
-            ( Loading, getWeather )
+            ( Loading, getWeather position )
 
 
-getWeather : Cmd Msg
-getWeather =
+getWeather : Position -> Cmd Msg
+getWeather position =
+    let
+        urlWithPosition =
+            "https://api.met.no/weatherapi/locationforecast/2.0/compact?lat="
+                ++ String.fromFloat position.latitude
+                ++ "&lon="
+                ++ String.fromFloat position.longitude
+    in
     Http.get
-        { url = "https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=51.5&lon=0"
+        { url = urlWithPosition
         , expect = Http.expectJson GotWeather weatherDecoder
         }
 
