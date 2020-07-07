@@ -3,17 +3,19 @@ module Page.Weather exposing (..)
 import Html exposing (..)
 import Html.Events exposing (onClick)
 import Http
+import Iso8601 as T
 import Json.Decode as JD
+import Time
 
 
 type Model
     = Failure
     | Loading
-    | Success String
+    | Success (List Temperature)
 
 
 type Msg
-    = GotWeather (Result Http.Error String)
+    = GotWeather (Result Http.Error (List Temperature))
     | GetWeather
 
 
@@ -22,23 +24,24 @@ type alias Position =
     , longitude : Float
     }
 
+
 defaultPosition : Position
 defaultPosition =
-    { latitude = 51.5
-    , longitude = 0.0
+    { latitude = 60.3
+    , longitude = 5.3
     }
+
 
 init : Model
 init =
-    Success "Get weather by pressing the button"
+    Success []
 
 
 view : Model -> { title : String, body : Html Msg }
 view model =
     { title = "Weather"
     , body =
-        div []
-            [ viewWeather model ]
+        viewWeather model
     }
 
 
@@ -61,8 +64,71 @@ viewWeather model =
         Loading ->
             text "Loading..."
 
-        Success s ->
-            weatherView s
+        Success weather ->
+            div []
+                [ weatherView "Click on button to get temperatures!"
+                , viewTemperatureList weather
+                ]
+
+
+toDayString : Time.Weekday -> String
+toDayString day =
+    case day of
+        Time.Mon ->
+            "Mandag"
+
+        Time.Tue ->
+            "Tirsdag"
+
+        Time.Wed ->
+            "Onsdag"
+
+        Time.Thu ->
+            "Torsdag"
+
+        Time.Fri ->
+            "Fredag"
+
+        Time.Sat ->
+            "Lørdag"
+
+        Time.Sun ->
+            "Søndag"
+
+
+type alias TempView =
+    { day : String
+    , hour : String
+    , temp : String
+    }
+
+
+viewTemperatureList : List Temperature -> Html Msg
+viewTemperatureList temperatures =
+    let
+        weekDayValue day =
+            Time.toWeekday Time.utc day
+
+        days temps =
+            List.map
+                (\day ->
+                    TempView
+                        (toDayString (weekDayValue (.time day)))
+                        (String.fromInt (Time.toHour Time.utc (.time day)))
+                        (String.fromFloat (.temp day))
+                )
+                temps
+    in
+    div []
+        [ ul []
+            (List.map
+                (\d ->
+                    li []
+                        [ text (.day d ++ " kl " ++ .hour d ++ ": " ++ .temp d ++ " grader") ]
+                )
+                (days temperatures)
+            )
+        ]
 
 
 update : Msg -> Model -> Position -> ( Model, Cmd Msg )
@@ -95,6 +161,28 @@ getWeather position =
         }
 
 
-weatherDecoder : JD.Decoder String
+type alias Temperature =
+    { time : Time.Posix
+    , temp : Float
+    }
+
+
+weatherDecoder : JD.Decoder (List Temperature)
 weatherDecoder =
-    JD.field "geometry" (JD.field "type" JD.string)
+    temperatureEveryHour
+
+
+temperatureEveryHour : JD.Decoder (List Temperature)
+temperatureEveryHour =
+    JD.list
+        (JD.map2 Temperature
+            (JD.field "time" T.decoder)
+            temperatureDecoder
+        )
+        |> JD.field "timeseries"
+        |> JD.field "properties"
+
+
+temperatureDecoder : JD.Decoder Float
+temperatureDecoder =
+    JD.at [ "data", "instant", "details", "air_temperature" ] JD.float
