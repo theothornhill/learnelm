@@ -30,27 +30,27 @@ view model =
     }
 
 
+weatherView : String -> Html Msg
+weatherView t =
+    div []
+        [ button
+            [ onClick GetWeather ]
+            [ text "Get Weather" ]
+        , text t
+        ]
+
+
 viewWeather : Model -> Html Msg
 viewWeather model =
     case model of
         Failure ->
-            div []
-                [ button
-                    [ onClick GetWeather ]
-                    [ text "Get Weather" ]
-                , text "Failed, try again"
-                ]
+            weatherView "Failed, try again"
 
         Loading ->
             text "Loading..."
 
         Success s ->
-            div []
-                [ button
-                    [ onClick GetWeather ]
-                    [ text "Get Weather" ]
-                , text s
-                ]
+            weatherView s
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
