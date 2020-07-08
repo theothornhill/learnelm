@@ -6,8 +6,8 @@ import Html exposing (..)
 import Html.Attributes exposing (href, style)
 import Page
 import Page.Home as Home
-import Page.Second as Second
 import Page.Weather as Weather
+import Page.WebSocket as WebSocket
 import Url
 import Url.Parser as Parser
 
@@ -38,7 +38,7 @@ type alias Model =
 type SubModel
     = Home Home.Model
     | Weather Weather.Model
-    | Second Second.Model
+    | WebSocket WebSocket.Model
 
 
 init : () -> Url.Url -> Nav.Key -> ( Model, Cmd Msg )
@@ -59,7 +59,8 @@ viewLink : String -> String -> Html msg
 viewLink path t =
     li
         [ style "list-style" "none"
-        , style "justify-self" "center"]
+        , style "justify-self" "center"
+        ]
         [ a [ href path ] [ text t ] ]
 
 
@@ -86,7 +87,7 @@ viewHeader model =
             ]
             [ viewLink (Url.toString homeUrl) "Home"
             , viewLink (Url.toString weatherUrl) "Weather"
-            , viewLink (Url.toString secondUrl) "Second"
+            , viewLink (Url.toString secondUrl) "WebSocket"
             ]
         ]
 
@@ -113,8 +114,8 @@ view model =
         Weather weather ->
             viewPage GotWeatherMsg (Weather.view weather)
 
-        Second second ->
-            viewPage GotSecondMsg (Second.view second)
+        WebSocket second ->
+            viewPage GotWebSocketMsg (WebSocket.view second)
 
 
 
@@ -126,7 +127,7 @@ type Msg
     | UrlChanged Url.Url
     | GotHomeMsg Home.Msg
     | GotWeatherMsg Weather.Msg
-    | GotSecondMsg Second.Msg
+    | GotWebSocketMsg WebSocket.Msg
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -157,9 +158,9 @@ update message model =
             Weather.update subMsg weather Weather.defaultPosition
                 |> updateWith Weather GotWeatherMsg model
 
-        ( GotSecondMsg subMsg, Second second ) ->
-            Second.update subMsg second
-                |> updateWith Second GotSecondMsg model
+        ( GotWebSocketMsg subMsg, WebSocket second ) ->
+            WebSocket.update subMsg second
+                |> updateWith WebSocket GotWebSocketMsg model
 
         _ ->
             ( model, Cmd.none )
@@ -172,13 +173,12 @@ updateWith toModel toMsg model ( subModel, subCmd ) =
     )
 
 
-
 -- SUBSCRIPTIONS
 
 
 subscriptions : Model -> Sub Msg
 subscriptions _ =
-    Sub.none
+    Sub.map GotWebSocketMsg (WebSocket.messageReceiver WebSocket.Receive)
 
 
 
@@ -190,7 +190,7 @@ parser =
     Parser.oneOf
         [ Parser.map (Home Home.init) (Parser.s "home")
         , Parser.map (Weather Weather.init) (Parser.s "weather")
-        , Parser.map (Second Second.init) (Parser.s "second")
+        , Parser.map (WebSocket WebSocket.init) (Parser.s "second")
         ]
 
 

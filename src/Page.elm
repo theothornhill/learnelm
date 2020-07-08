@@ -1,12 +1,12 @@
-module Page exposing (..)
+module Page exposing (view, Page(..))
 
-import Html exposing (..)
+import Html exposing (Html)
 import Browser
 
 type Page
     = Home
     | Weather
-    | Second
+    | WebSocket
 
 
 view : { title : String, body : Html msg } -> Browser.Document msg
