@@ -1,6 +1,7 @@
 module Page.Weather exposing (..)
 
 import Html exposing (..)
+import Html.Attributes exposing (style)
 import Html.Events exposing (onClick)
 import Http
 import Iso8601 as T
@@ -9,7 +10,7 @@ import Time
 
 
 type Model
-    = Failure
+    = Failure String
     | Loading
     | Success (List Temperature)
 
@@ -45,30 +46,53 @@ view model =
     }
 
 
-weatherView : String -> Html Msg
-weatherView t =
-    div []
+getWeatherButton : String -> Html Msg
+getWeatherButton t =
+    div [ style "justify-self" "center" ]
         [ button
             [ onClick GetWeather ]
             [ text "Get Weather" ]
-        , text t
+        , div [] [ text t ]
         ]
 
 
 viewWeather : Model -> Html Msg
 viewWeather model =
     case model of
-        Failure ->
-            weatherView "Failed, try again"
+        Failure str ->
+            getWeatherButton str
 
         Loading ->
             text "Loading..."
 
         Success weather ->
-            div []
-                [ weatherView "Click on button to get temperatures!"
+            div [ style "display" "grid" ]
+                [ getWeatherButton ""
+                , viewCurrentTemperature weather
                 , viewTemperatureList weather
                 ]
+
+
+viewCurrentTemperature : List Temperature -> Html Msg
+viewCurrentTemperature weather =
+    let
+        head =
+            List.head weather
+
+        headVal =
+            case head of
+                Just val ->
+                    "It is now " ++ String.fromFloat (.temp val) ++ " degrees"
+
+                Nothing ->
+                    ""
+    in
+    div
+        [ style "justify-self" "end"
+        , style "padding-right" "5em"
+        , style "font-size" "16pt"
+        ]
+        [ text headVal ]
 
 
 toDayString : Time.Weekday -> String
@@ -98,36 +122,71 @@ toDayString day =
 
 type alias TempView =
     { day : String
-    , hour : String
+    , hour : Int
     , temp : String
     }
 
 
-viewTemperatureList : List Temperature -> Html Msg
-viewTemperatureList temperatures =
+createTempViews : List Temperature -> List TempView
+createTempViews temps =
     let
         weekDayValue day =
             Time.toWeekday Time.utc day
-
-        days temps =
-            List.map
-                (\day ->
-                    TempView
-                        (toDayString (weekDayValue (.time day)))
-                        (String.fromInt (Time.toHour Time.utc (.time day)))
-                        (String.fromFloat (.temp day))
-                )
-                temps
     in
+    List.map
+        (\day ->
+            TempView
+                (toDayString (weekDayValue (.time day)))
+                (Time.toHour Time.utc (.time day))
+                (String.fromFloat (.temp day))
+        )
+        temps
+
+
+viewTemperature : TempView -> Html Msg
+viewTemperature temp =
+    let
+        hourString =
+            String.fromInt (.hour temp) ++ ":00"
+
+        time =
+            if .hour temp < 10 then
+                "0" ++ hourString
+
+            else
+                hourString
+    in
+    li [ style "border-top" "1px solid black" ]
+        [ div
+            [ style "display" "grid"
+            , style "grid-template-columns" "1fr 1fr 1fr"
+            , style "min-height" "5em"
+            ]
+            [ div
+                [ style "justify-self" "center"
+                , style "align-self" "center"
+                ]
+                [ text (.day temp) ]
+            , div
+                [ style "justify-self" "center"
+                , style "align-self" "center"
+                ]
+                [ text time ]
+            , div
+                [ style "justify-self" "center"
+                , style "align-self" "center"
+                ]
+                [ text (.temp temp ++ " grader") ]
+            ]
+        ]
+
+
+viewTemperatureList : List Temperature -> Html Msg
+viewTemperatureList temperatures =
     div []
-        [ ul []
-            (List.map
-                (\d ->
-                    li []
-                        [ text (.day d ++ " kl " ++ .hour d ++ ": " ++ .temp d ++ " grader") ]
-                )
-                (days temperatures)
-            )
+        [ ul
+            [ style "padding" "unset" ]
+            (List.map (\d -> viewTemperature d) (createTempViews temperatures))
         ]
 
 
@@ -139,8 +198,22 @@ update msg _ position =
                 Ok weather ->
                     ( Success weather, Cmd.none )
 
-                Err _ ->
-                    ( Failure, Cmd.none )
+                Err err ->
+                    case err of
+                        Http.BadUrl str ->
+                            ( Failure str, Cmd.none )
+
+                        Http.Timeout ->
+                            ( Failure "Timeout", Cmd.none )
+
+                        Http.NetworkError ->
+                            ( Failure "NetworkError", Cmd.none )
+
+                        Http.BadStatus int ->
+                            ( Failure (String.fromInt int), Cmd.none )
+
+                        Http.BadBody str ->
+                            ( Failure str, Cmd.none )
 
         GetWeather ->
             ( Loading, getWeather position )

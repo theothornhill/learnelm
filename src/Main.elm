@@ -3,7 +3,7 @@ module Main exposing (..)
 import Browser
 import Browser.Navigation as Nav
 import Html exposing (..)
-import Html.Attributes exposing (href)
+import Html.Attributes exposing (href, style)
 import Page
 import Page.Home as Home
 import Page.Second as Second
@@ -58,7 +58,8 @@ init _ url key =
 viewLink : String -> String -> Html msg
 viewLink path t =
     li
-        []
+        [ style "list-style" "none"
+        , style "justify-self" "center"]
         [ a [ href path ] [ text t ] ]
 
 
@@ -79,7 +80,10 @@ viewHeader model =
     in
     div []
         [ ul
-            []
+            [ style "display" "grid"
+            , style "grid-template-columns" "1fr 1fr 1fr"
+            , style "padding" "unset"
+            ]
             [ viewLink (Url.toString homeUrl) "Home"
             , viewLink (Url.toString weatherUrl) "Weather"
             , viewLink (Url.toString secondUrl) "Second"

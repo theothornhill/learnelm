@@ -17,10 +17,15 @@ init =
     Model "Click a link to navigate"
 
 
+view : Model -> { title : String, body : Html Msg }
 view model =
     { title = "Home"
     , body =
-        div [] [ text model.text ]
+        div
+            [ style "display" "grid"
+            , style "justify-items" "center"
+            ]
+            [ text model.text ]
     }
 
 
