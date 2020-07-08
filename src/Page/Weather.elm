@@ -51,7 +51,7 @@ getWeatherButton t =
     div [ style "justify-self" "center" ]
         [ button
             [ onClick GetWeather ]
-            [ text "Get Weather" ]
+            [ text "Hent været" ]
         , div [] [ text t ]
         ]
 
@@ -82,7 +82,7 @@ viewCurrentTemperature weather =
         headVal =
             case head of
                 Just val ->
-                    "It is now " ++ String.fromFloat (.temp val) ++ " degrees"
+                    "Det er nå " ++ String.fromFloat (.temp val) ++ " grader"
 
                 Nothing ->
                     ""
